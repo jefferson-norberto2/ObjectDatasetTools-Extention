@@ -46,7 +46,7 @@ MESHING = True
 plane_equation = None
 
 def post_process(originals, voxel_Radius, inlier_Radius):
-     """
+    """
     Merge segments so that new points will not be add to the merged
     model if within voxel_Radius to the existing points, and keep a vote
     for if the point is issolated outside the radius of inlier_Radius at 
@@ -73,30 +73,29 @@ def post_process(originals, voxel_Radius, inlier_Radius):
       The number of vote (seen duplicate points within the voxel_radius) each 
       processed point has reveived
     """
+    for point_id in trange(len(originals)):
 
-     for point_id in trange(len(originals)):
+        if point_id == 0:
+              vote = np.zeros(len(originals[point_id].points))
+              points = np.array(originals[point_id].points,dtype = np.float64)
+              colors = np.array(originals[point_id].colors,dtype = np.float64)
 
-          if point_id == 0:
-               vote = np.zeros(len(originals[point_id].points))
-               points = np.array(originals[point_id].points,dtype = np.float64)
-               colors = np.array(originals[point_id].colors,dtype = np.float64)
+        else:
+      
+              points_temp = np.array(originals[point_id].points,dtype = np.float64)
+              colors_temp = np.array(originals[point_id].colors,dtype = np.float64)
+              
+              dist , index = nearest_neighbour(points_temp, points)
+              new_points = np.where(dist > voxel_Radius)
+              points_temp = points_temp[new_points]
+              colors_temp = colors_temp[new_points]
+              inliers = np.where(dist < inlier_Radius)
+              vote[(index[inliers],)] += 1
+              vote = np.concatenate([vote, np.zeros(len(points_temp))])
+              points = np.concatenate([points, points_temp])
+              colors = np.concatenate([colors, colors_temp])
 
-          else:
-       
-               points_temp = np.array(originals[point_id].points,dtype = np.float64)
-               colors_temp = np.array(originals[point_id].colors,dtype = np.float64)
-               
-               dist , index = nearest_neighbour(points_temp, points)
-               new_points = np.where(dist > voxel_Radius)
-               points_temp = points_temp[new_points]
-               colors_temp = colors_temp[new_points]
-               inliers = np.where(dist < inlier_Radius)
-               vote[(index[inliers],)] += 1
-               vote = np.concatenate([vote, np.zeros(len(points_temp))])
-               points = np.concatenate([points, points_temp])
-               colors = np.concatenate([colors, colors_temp])
-
-     return (points,colors,vote) 
+    return (points,colors,vote) 
 
 def load_pcds(path, downsample = True, interval = 1):
 
@@ -208,17 +207,19 @@ def point_to_plane2(X,p):
 
 if __name__ == "__main__":
   
-    try:
-        if sys.argv[1] == "all":
-            folders = glob.glob("LINEMOD/*/")
-        elif sys.argv[1]+"/" in glob.glob("LINEMOD/*/"):
-            folders = [sys.argv[1]+"/"]
-        else:
-            print_usage()
-            exit()
-    except:
-        print_usage()
-        exit()
+    # try:
+    #     if sys.argv[1] == "all":
+    #         folders = glob.glob("LINEMOD/*/")
+    #     elif sys.argv[1]+"/" in glob.glob("LINEMOD/*/"):
+    #         folders = [sys.argv[1]+"/"]
+    #     else:
+    #         print_usage()
+    #         exit()
+    # except:
+    #     print_usage()
+    #     exit()
+
+    folders = glob.glob("LINEMOD/*/")
 
     for path in folders:
         
@@ -229,7 +230,7 @@ if __name__ == "__main__":
         Ts = np.load(path + 'transforms.npy')
 
 
-        print("Load and segment frames")
+        print("Load and segment frames in path", path)
         originals = load_pcds(path, downsample = False, interval = RECONSTRUCTION_INTERVAL)     
         for point_id in range(len(originals)):
              originals[point_id].transform(Ts[int(RECONSTRUCTION_INTERVAL/LABEL_INTERVAL)*point_id])
